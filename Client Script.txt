@@ -1,0 +1,166 @@
+=> Auto-Fill Buyer Details from Inquiry Module
+
+Purpose: When a sales agent selects a Buyer Name in the Transaction Module, the system should automatically populate 
+the buyer’s email, phone, and budget details from the Inquiries Module.
+
+const inq_data = ZDK.Page.getField("Contact_Name").getValue();
+log(inq_data.id);
+if (inq_data != null)
+{
+    var inquiry_dt = ZDK.Apps.CRM.Contacts.fetchById(inq_data.id);
+    log(inquiry_dt);
+    if (inquiry_dt != null)
+    {
+        ZDK.Page.getField("Client_Email").setValue(inquiry_dt.Email_Address);
+        ZDK.Page.getField("Phone").setValue(inquiry_dt.Phone_Number);
+        ZDK.Page.getField("Budget").setValue(inquiry_dt.Budget_Range);
+    }
+}
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+=> Auto-Calculate Commission in Transaction Module
+
+Purpose: When a Transaction Amount is entered, the system should automatically calculate the Agent’s Commission based on the assigned commission percentage.
+
+var sale_price = ZDK.Page.getField("Sale_Price").getValue();
+var commission_rate = ZDK.Page.getField("Commission_Percentage").getValue();
+
+var amount = sale_price * commission_rate / 100;
+
+ZDK.Page.getField("Commission").setValue(amount);
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+=> Prevent Duplicate Property Listings
+
+
+Purpose: Before submitting a New Property Listing, the system should check if a similar property address already exists in the CRM.
+
+var property_data = ZDK.Apps.CRM.Property_Listings.fetch();
+var address = ZDK.Page.getField("Address").getValue();
+var flag = 0;
+log(property_data);
+log(address);
+for (let response of property_data) {
+    if (address === response.Address) {
+       
+        flag = 1;
+    }  
+}
+if (flag == 1) {
+    
+    ZDK.Client.showConfirmation("Property with same address already exist please enter different address","Ok");
+    return false;
+}
+else
+{
+    return true;
+}
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+=> Auto-Suggest Loan Products Based on Income Level
+
+
+Purpose: When an Applicant’s Monthly Income is entered, the system should suggest a suitable loan product based on predefined income brackets.
+
+var monthly_income = ZDK.Page.getField("Monthly_Income").getValue();
+
+if (monthly_income > 10000)
+{
+    ZDK.Page.getField("Loan_Type").setValue("Home");
+}
+else if (monthly_income > 5000)
+{
+    ZDK.Page.getField("Loan_Type").setValue("Auto");
+}
+else if (monthly_income <= 5000)
+{
+    ZDK.Page.getField("Loan_Type").setValue("Personal ");
+}
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Processing Fees Verifications
+
+var amount = ZDK.Page.getField('Loan_Amount_Approved').getValue();
+var process_fees = ZDK.Page.getField('Processing_Fees').getValue();
+var amount_5 = amount * 5 / 100;
+
+if (process_fees < 0 || process_fees > amount_5)
+{
+    ZDK.Page.getField('Processing_Fees').showError("Invalid processing fee amount");
+    return false;
+}
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+=> Auto-Calculate Insurance Premium Based on Age & Coverage
+
+
+Purpose: When a customer selects a Coverage Amount, the system should automatically calculate the Monthly Premium based on their Age and Risk Factors.
+
+var risk_factor = ZDK.Page.getField("Risk_Factor").getValue();
+var age_factor = ZDK.Page.getField("Age_Factor").getValue();
+var coverage_amount = ZDK.Page.getField("Coverage_Amount").getValue();
+
+var monthly_premium = coverage_amount * age_factor * risk_factor;
+
+ZDK.Page.getField("Monthly_Premium").setValue(monthly_premium);
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+=> Auto-Fill Policyholder Details from Existing Customer Records
+
+
+Purpose: When a Policyholder Name is selected, the system should auto-fill email, phone, and existing policies from the Customers Module.
+
+const policyholder = ZDK.Page.getField("Policyholder_Name").getValue();
+let count = 0;
+log(policyholder.id);
+ 
+if (policyholder != null)
+{
+    var policy_details = ZDK.Apps.CRM.Contacts.fetchById(policyholder.id);
+    log(policy_details);
+   
+    if (policy_details != null)
+    {
+        ZDK.Page.getField("Email").setValue(policy_details.Email_Address);
+        ZDK.Page.getField("Phone").setValue(policy_details.Contact_Number);
+
+        var related_records = ZDK.Apps.CRM.Contacts.fetchRelatedRecords(policyholder.id, "Policy_Records11");
+        log(related_records);
+        if (related_records != null) {
+            related_records.forEach((rec) => {
+                count += 1;
+            })
+            
+        }
+        if (count > 0) {
+            ZDK.Page.getField("Existing_Policies").setValue(count);
+
+        } else {
+            ZDK.Page.getField("Existing_Policies").setValue(0);
+
+        }
+        
+    }
+}
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+=> Max Medical Coverage for pre existing health policy
+
+var coverage_amount = ZDK.Page.getField('Coverage_Amount_Interested').getValue();
+var pre_value = ZDK.Page.getField('Pre_Existing_Conditions').getValue();
+
+if (pre_value != null &&  coverage_amount > 50000)
+{
+    ZDK.Page.getField('Coverage_Amount_Interested').showError('Maximum coverage for pre-existing conditions is $50,000');
+    return false;
+}

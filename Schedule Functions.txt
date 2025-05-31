@@ -1,0 +1,175 @@
+Every day at 8 AM, the system shall check for high-risk claims where the Claim Amount exceeds $10,000 and the policyholder has filed 3+ claims in the past year, 
+flag them as "High-Risk", and assign them to a senior underwriter for manual review.
+
+
+void schedule.High_Risk_Claim2(String claim_id)
+{
+one_year_ago = zoho.currentdate.subYear(1);
+// 	info "One year ago: " + one_year_ago;
+// Get single contact by ID
+deal_id = zoho.crm.getRecordById("Deals",claim_id);
+contact_name = deal_id.get("Contact_Name").get("id");
+info contact_name;
+amount = deal_id.get("Claim_Settlement_Amount");
+deal_id_email = deal_id.get("Email_Address");
+search_criteria = "Contact_Name:equals:" + contact_name;
+match_deals = zoho.crm.searchRecords("Deals",search_criteria);
+info match_deals;
+// Filter by date within the past year
+canceled_count = 0;
+for each  deal in match_deals
+{
+	closed_date = deal.get("Closing_Date");
+	info closed_date;
+	if(closed_date != null)
+	{
+		closed_date_parsed = closed_date.toDate();
+		// 		info closed_date_parsed;
+		if(closed_date_parsed >= one_year_ago && closed_date_parsed <= zoho.currentdate.toDate() && amount > 10000)
+		{
+			canceled_count = canceled_count + 1;
+		}
+	}
+}
+info canceled_count;
+// Update Risk Status
+update_map_high = Map();
+update_map_low = Map();
+if(canceled_count >= 3)
+{
+	update_map_high.put("Risk_Level","High");
+	updateResp = zoho.crm.updateRecord("Contacts",contact_name,update_map_high);
+	info updateResp;
+}
+else
+{
+	update_map_low.put("Risk_Level","Low");
+	updateResp = zoho.crm.updateRecord("Contacts",contact_name,update_map_low);
+	info updateResp;
+}
+}
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Every day at 6 AM, the system shall check all overdue EMI payments that are past due by more than 5 days, apply a 2% late payment fee, update the total outstanding amount,
+ and send a payment reminder email to the borrower.
+
+void schedule.EMI_Overdue_More_5Days(String repayment_id)
+{
+re_data = zoho.crm.getRecordById("Repayment_Schedules",repayment_id);
+info re_data;
+email_data = re_data.get("Borrower_Email");
+info email_data;
+current_date = zoho.currentdate;
+days_overdue = ifnull(re_data.get("Over_Due_Days"),0);
+emi_amount = re_data.get("EMI_Amount");
+mp = Map();
+if(days_overdue > 5)
+{
+	lateFee = emi_amount * 0.02;
+	total_overdue_amount = emi_amount + lateFee;
+	info total_overdue_amount;
+	mp.put("Overdue_Amount",total_overdue_amount);
+	info mp;
+	update_data = zoho.crm.updateRecord("Repayment_Schedules",repayment_id,mp);
+	info update_data;
+	sendmail
+	[
+		from :zoho.loginuserid
+		to :email_data
+		subject :"Regarding Payment Reminder For Your Loan"
+		message :"Dear Customer,This is a reminder that your EMI payment has been overdued by more than 5 days.."
+	]
+}
+}
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Every Monday at 5 AM, the system shall identify fully paid loans (Total Outstanding = $0), update their Loan Status to "Closed", and send a notification to the loan officer.
+
+
+void schedule.Outstanding_Amount(String loan_case_id)
+{
+loan_case_info = zoho.crm.getRecordById("Deals",loan_case_id);
+outsatnding_amount = ifnull(loan_case_info.get("Outstanding_Amount"),0);
+info outsatnding_amount;
+update_map = Map();
+loan_status = loan_case_info.get("Loan_Status");
+update_map.put("Stage","Closed Won");
+if(outsatnding_amount == 0 && loan_status == "Disbursed")
+{
+	info zoho.crm.updateRecord("Deals",loan_case_id,update_map);
+}
+}
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Every Sunday at 2 AM, the system shall automatically archive old inquiries that have remained inactive for more than 90 days, update their status to "Archived", 
+and send a summary email to the sales team regarding lost leads.
+
+void schedule.Archive_Inactive_Inquiries(String inquiry_id)
+{
+inquiry_info = zoho.crm.getRecordById("Leads",inquiry_id);
+data_map = Map();
+status = ifnull(inquiry_info.get("Lead_Status"),"");
+data_map.put("Lead_Status","Archived");
+inquiry_date = inquiry_info.get("Inquiry_Date");
+now_days = inquiry_date.addDay(90);
+current_date = zoho.currentdate;
+ratings = inquiry_info.get("Rating");
+response = invokeurl
+[
+	url :"https://www.zohoapis.in/crm/v7/settings/user_groups/917987000000430328/associated_users"
+	type :GET
+	connection:"conn"
+];
+info response;
+if(response != null)
+{
+	UserList = List();
+	for each  rec in response.get("associated_users")
+	{
+		UserList.add(rec.getjson("email"));
+	}
+}
+info UserList;
+if(current_date > now_days && ratings != "Active")
+{
+	zoho.crm.updateRecord("Leads",inquiry_id,data_map);
+	// 	info "Yes";
+	sendmail
+	[
+		from :zoho.loginuserid
+		to :UserList
+		subject :"Regarding Archiving inactive inquiries "
+		message :"Hello i would like to inform you that few inquiries which were inactive for more than 90 Days are archived."
+	]
+}
+else
+{
+	info "No";
+}
+}
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Every day at 3 AM, the system shall check all Transactions marked as "Closed-Won", update the corresponding Property Listings to "Sold", and restrict new inquiries for these properties.
+void schedule.Property_status_to_sold(String transaction_id)
+{
+data_info = zoho.crm.getRecordById("Deals",transaction_id);
+deal_status = ifnull(data_info.get("Stage"),"");
+info deal_status;
+property_listings = ifnull(data_info.get("Property_Listing"),"");
+property_id = property_listings.getJson("id");
+info property_listings;
+data_map = Map();
+data_map.put("Availability_Status","Sold");
+if(deal_status == "Closed Won")
+{
+	update_record = zoho.crm.updateRecord("Property_Listings",property_id,data_map);
+}
+else
+{
+	info "No";
+}
+}
+
