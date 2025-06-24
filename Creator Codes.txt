@@ -291,3 +291,72 @@ if(input.Odoneter < dummy_var)
 	alert "Odometer Score can not be lower than previous value " + dummy_var ;
 	cancel submit;
 }
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//This Code is for generating Auto ID without Auto Number Field
+
+// Fetch latest Asset_Register record where Asset_Id is not empty
+latestAsset = Asset_Register[ID != 0] sort by Asset_Id desc;
+// Initialize counter
+ast_id = 1;
+for each  new_rec in latestAsset
+{
+	suffix = new_rec.Asset_Id.getsuffix("-");
+	if(suffix != null && suffix.isNumber())
+	{
+		ast_id = suffix.toNumber() + 1;
+	}
+	break;
+}
+// Format Asset_Id manually with leading zeros
+if(ast_id < 10)
+{
+	input.Asset_Id = "AST-00" + ast_id;
+}
+else if(ast_id < 100)
+{
+	input.Asset_Id = "AST-0" + ast_id;
+}
+else
+{
+	input.Asset_Id = "AST-" + ast_id;
+}
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//This Code is for Sending Invoice Through Deluge
+
+fileResp = invokeurl
+[
+	url :"https://creatorapp.zoho.com/demo3fidigitalcom/asset-management-system/record-pdf/Invoice_Report/" + input.ID + "/Invoice/kT6x1t3eNbN328raYpxsAOCssEuKAXGvtjDuSNunPvPGOAhsOr4xHd8rnVn1JM3Mf1R7CxO8m3HeENAQTtbBeBRU8b9DkGmu6Y8F"
+	type :GET
+];
+sendmail
+[
+	from :zoho.adminuserid
+	to :"kapil@fristinetech.com"
+	subject :"Welcome Aboard!"
+	message :"Dear Candidate,\n\nWelcome to the team! Please find the welcome document/image attached.\n\nRegards,\nHR Team"
+	Attachments :file:fileResp
+]
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//This Code is for Adding days based in selected frequency
+
+if(input.Last_Service_Date != null && input.Frequency != null)
+{
+	next_due_date = null;
+	if(input.Frequency == "Monthly")
+	{
+		next_due_date = input.Last_Service_Date.addDay(30);
+	}
+	else if(input.Frequency == "Quarterly")
+	{
+		next_due_date = input.Last_Service_Date.addDay(90);
+	}
+	if(next_due_date != null)
+	{
+		input.Next_Due_Date = next_due_date;
+	}
+}
