@@ -1,0 +1,34 @@
+//Fetching Ticket ID
+ticket_number = survey.get("question").get("A").get("response");
+info "Ticket No: " + ticket_number;
+//Fetching NPS Score
+nps_score = survey.get("question").get("B").get("response");
+info "NPS Score: " + nps_score;
+org_id = 60039685980;
+//Logic to Search Ticket in desk
+//
+//This code is for fetching Survey response and put into Zoho Desk Ticket
+
+//Map to search record
+search_map = {"ticketNumber":ticket_number};
+ticket_resp = zoho.desk.searchRecords(org_id,"tickets",search_map);
+info "Search Record Response : " + ticket_resp;
+ticket_list = ticket_resp.get("data");
+info "Ticket List: " + ticket_list;
+//Condition to update NPS Score in ticket in desk
+if(ticket_list != null && ticket_list.size() > 0)
+{
+	ticket = ticket_list.get(0);
+	ticket_id = ticket.get("id").toLong();
+	info "Ticket ID: " + ticket_id;
+	cf_map = Map();
+	cf_map.put("cf_nps",nps_score.toString());
+	update_map = Map();
+	update_map.put("cf",cf_map);
+	update_resp = zoho.desk.update(org_id,"tickets",ticket_id,update_map,"surveytodesk");
+	// 	info "Update Response: " + update_resp;
+}
+else
+{
+	info "Ticket not found with this ticket number.";
+}
