@@ -1,0 +1,293 @@
+//Auto Generate Alpha Numeric ID
+
+alphabets = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"};
+random_alpha_1 = alphabets.get(randomNumber(0,26));
+random_alpha_2 = alphabets.get(randomNumber(0,26));
+random_alpha_3 = alphabets.get(randomNumber(0,26));
+random_alpha_4 = alphabets.get(randomNumber(0,26));
+//
+//Last 4 digits of Vehicle Reg No.
+random_1 = randomNumber(0,9).toString();
+random_2 = randomNumber(0,9).toString();
+random_3 = randomNumber(0,9).toString();
+random_4 = randomNumber(0,9).toString();
+random_5 = randomNumber(0,9).toString();
+//
+//Vehicle Registration No 
+series = (random_alpha_1 + random_alpha_2) + random_1 + random_2 + random_alpha_3 + random_alpha_4 + random_3 + random_4 + random_5;
+// info series;
+input.Government_ID = series;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// Auto Populate Based on User Input
+
+trip_data = Trip[ID == input.Trip_Expense];
+//fetching Vehicle Info
+vehicle_id = trip_data.Vehicle;
+vehicle_data = Vehicle[ID == vehicle_id];
+vehicle_name = vehicle_data.Vehicle_Model;
+vehicle_reg_no = vehicle_data.Vehicle_Registration_Number;
+maintenance_cost = vehicle_data.Maintenance_Cost;
+emi_amt = vehicle_data.EMI_Amount;
+//Putting Vehicle Info
+input.Vehicle_Registration_Number_Exp = vehicle_reg_no;
+input.Vehicle_Model_Exo = vehicle_name;
+input.Maintenance_Cost_Exp = maintenance_cost;
+input.EMI_Amount = emi_amt;
+//Fetching Driver Info
+driver_id = trip_data.Driver_Trip;
+driver_data = Driver[ID == driver_id];
+driver_name = driver_data.Driver_Name;
+driver_contact = driver_data.Driver_Contact_Number;
+govt_id = driver_data.Government_ID;
+cms_card = driver_data.CMS_Card_Withdrawal;
+comments = driver_data.Comments_Driver;
+//Putting Driver info
+input.Driver_Name_Exp = driver_name;
+input.Phone_Number_Exp = driver_contact;
+input.CMS_Card_Withdrawal_Exp = cms_card;
+input.Government_ID_Exp = govt_id;
+input.Comments_Exp = comments;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//Create Record in Zoho Books 
+
+// new_data = zoho.books.getRecords("chartofaccounts","60040309913");
+// // info new_data ;
+trip_data = Expense[ID != 0];
+orgid = "60040309913";
+start_date = zoho.currentdate;
+total_exp = input.Total_Expenses;
+exp_acc = trip_data.Expense_Account;
+paid_through = trip_data.Paid_Through;
+// info exp_acc;
+info paid_through;
+mp = Map();
+mp.put("date",start_date);
+mp.put("amount",total_exp);
+mp.put("account_id","2540735000000000522");
+mp.put("account_name","Automobile Expense");
+// mp.put("account_name",exp_acc);
+mp.put("paid_through_account_id","2540735000000000570");
+mp.put("paid_through_account_name","Employee Advance");
+// mp.put("paid_through_account_name",paid_through);
+// info mp;
+res = zoho.books.createRecord("expenses",orgid,mp,"zoho_books_connection");
+// info res;
+// if(res != NULL)
+// {
+// 	info "Expenses are Inserted Successfully in Books...";
+// }
+// Other Code
+// new_map = Map();
+// new_map.put("date",start_date);
+// new_map.put("amount",total_exp);
+// // new_map.put("account_id", <OBJECT>)
+// new_map.put("account_type","Other Asset");
+// new_map.put("account_name","Try");
+// res = zoho.books.createRecord("chartofaccounts",orgid,new_map,"zoho_books_connection");
+// info res;
+//
+//
+//
+// orgid = "60040309913";
+// // Fetch all Chart of Accounts
+// accounts_list = zoho.books.getRecords("chartofaccounts",orgid);
+// // Simulate fetching data from custom module (trip_data)
+// trip_data = Expense[ID != 0];
+// exp_acc = trip_data.Expense_Account;
+// paid_through = trip_data.Paid_Through.get("account_id");
+// info "Expense Account: " + exp_acc;
+// info "Paid Through: " + paid_through;
+// Initialize variables to store account details
+// exp_acc_id = "";
+// paid_through_id = "";
+// // Loop through the chart of accounts to find matching accounts
+// for each  account in accounts_list.get("chartofaccounts")
+// {
+// 	info exp_acc_id = "exp_acc_id" + account.get("account_id");
+// 	// 	info account;
+// 	if(account.get("account_name") == exp_acc)
+// 	{
+// 		// 		info "exp_acc_id" + exp_acc_id = account.get("account_id");
+// 	}
+// 	if(account.get("account_name") == paid_through)
+// 	{
+// 		info paid_through_id = "paid_through_id" + account.get("account_id");
+// 	}
+// }
+// Build the map
+// mp = Map();
+// mp.put("date",zoho.currentdate);
+// mp.put("amount",input.Total_Expenses);
+// mp.put("account_id",exp_acc_id);
+// mp.put("account_name",exp_acc);
+// mp.put("paid_through_account_id",paid_through_id);
+// mp.put("paid_through_account_name",paid_through);
+// info mp;
+// Create expense record
+res = zoho.books.createRecord("expenses",orgid,mp,"zoho_books_connection");
+if(res != null)
+{
+	// 	info "Expenses are Inserted Successfully in Books...";
+}
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+// Calculate Total Expense
+// In this we are fetching value from multiple forms
+
+trip_data = Trip[ID == input.Trip_Expense];
+//Vehicle Expenses
+vehicle_id = trip_data.Vehicle;
+vehicle_data = Vehicle[ID == vehicle_id];
+emi_amount = vehicle_data.EMI_Amount;
+maintainance_cost = vehicle_data.Maintenance_Cost;
+vehicle_exp = emi_amount + maintainance_cost;
+input.Vehicle_Expenses = vehicle_exp;
+driver_data = Driver[ID == vehicle_data.Driver_Vehicle];
+driver_exp = driver_data.CMS_Card_Withdrawal;
+//Tyre Expenses
+tyre_data = Tyre[Vehicle == vehicle_id];
+installation_cost = tyre_data.Tyre_Installation_Cost;
+air_expense = tyre_data.Air_Refuelling_Cost;
+tyre_exp = installation_cost + air_expense;
+input.Tyre_Expenses = tyre_exp;
+// driver_data = Driver[ID = ];
+//Trip Expense
+disel_cost = trip_data.Diesel_Cost;
+fastag_charge = trip_data.Fastag_Charges;
+toll_tax = trip_data.Toll_Tax;
+other_exp = trip_data.Other_Trip_Expenses;
+trip_exp = disel_cost + fastag_charge + toll_tax + other_exp;
+//Total Expenses
+total_exp = trip_exp + vehicle_exp + tyre_exp + driver_exp;
+input.Total_Expenses = total_exp;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//Date Validation
+
+if(input.Trip_Start_Date < today)
+{
+	alert "Start Date cannot be in past";
+	cancel submit;
+}
+else if(input.Trip_Start_Date > input.Trip_End_Date)
+{
+	alert "Start Date Cannot be Higher than End Date";
+	cancel submit;
+}
+// else if(input.Trip_End_Date < input.Trip_Start_Date)
+// {
+// 	alert "End date cannot be lower than start date";
+// 	cancel submit;
+// }
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//In this It will not allow to create record with same value and date duration
+
+// Get current form values
+selected_driver = input.Driver_Trip;
+start_date = input.Trip_Start_Date;
+end_date = input.Trip_End_Date;
+// Fetch overlapping trips for the same driver
+existing_trips = Trip[Driver_Trip == selected_driver && Trip_Start_Date <= end_date && Trip_End_Date >= start_date];
+// If overlapping trip exists, throw error
+if(existing_trips.count() > 0)
+{
+	alert "This driver is already assigned to another trip during the selected date range.";
+	cancel submit;
+}
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//Auto Populate Look Up value based on another lookup input
+
+VehicleData = Vehicle[ID == input.Vehicle];
+if(VehicleData != null && VehicleData.Driver_Vehicle != null)
+{
+	input.Driver_Trip = VehicleData.Driver_Vehicle;
+}
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+//This Code is for logging history into Sub Form
+
+disable Trip_History_Info.Total_Trip_Cost;
+disable Trip_History_Info.Trip_ID_History;
+disable Trip_History_Info.End_Date_History;
+disable Trip_History_Info.Start_Date_History;
+disable Trip_History_Info.Vehicle_Model_History;
+input.Trip_History_Info.clear();
+trip_data = Trip[Driver_Trip == input.Driver];
+govt_id = trip_data.Government_ID_Trip;
+phone_no = trip_data.Driver_Phone_Number_Trip;
+input.Government_ID_History = govt_id;
+input.Phone_Number_History = phone_no;
+for each  history_data in trip_data
+{
+	collction_var = Collection();
+	all_data = Trip_History.Trip_History_Info();
+	all_data.Trip_ID_History=history_data.Trip_ID;
+	all_data.Vehicle_Model_History=history_data.Vehicle.Vehicle_Model;
+	all_data.Start_Date_History=history_data.Trip_Start_Date;
+	all_data.End_Date_History=history_data.Trip_End_Date;
+	all_data.Total_Trip_Cost=history_data.Fastag_Charges + history_data.Other_Trip_Expenses + history_data.Diesel_Cost + history_data.Toll_Tax;
+	collction_var.insert(all_data);
+	input.Trip_History_Info.insert(collction_var);
+}
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//Generate Random Vehicle No
+
+//State Code
+state_code = "GJ";
+//
+//Dostrict Code
+district_code = "10";
+//
+//Other 2 Alphabets
+alphabets = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"};
+random_alpha_1 = alphabets.get(randomNumber(0,26));
+random_alpha_2 = alphabets.get(randomNumber(0,26));
+//
+//Last 4 digits of Vehicle Reg No.
+random_1 = randomNumber(0,9).toString();
+random_2 = randomNumber(0,9).toString();
+random_3 = randomNumber(0,9).toString();
+random_4 = randomNumber(0,9).toString();
+//
+//Vehicle Registration No 
+series = state_code + district_code + random_alpha_1 + random_alpha_2 + random_1 + random_2 + random_3 + random_4;
+// info series;
+input.Vehicle_Registration_Number = series;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//Search Max value with in record of same data 
+
+asset_data = Allocation_Management[Asset == input.Asset];
+// info asset_data;
+dummy_var = 0;
+for each odo_var in asset_data
+{
+	odo_data = odo_var.Odoneter;
+// 	info odo_data;
+	if ( odo_data > dummy_var)
+    {
+        dummy_var = odo_data;
+    }
+}
+// info dummy_var;
+if(input.Odoneter < dummy_var)
+{
+	alert "Odometer Score can not be lower than previous value " + dummy_var ;
+	cancel submit;
+}
