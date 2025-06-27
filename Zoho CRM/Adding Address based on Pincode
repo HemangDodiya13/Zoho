@@ -1,0 +1,84 @@
+//Adding Address Details Based on Pincode
+//Address Detail is fetched by URL at line No 11
+
+void automation.pincode(int leadid)
+{
+	Data = zoho.crm.getRecordById("Leads", leadid);
+	PinCode = ifnull(Data.get("Zip_Code"), null);
+ 
+	resp = invokeurl
+	[
+		url : "https://api.postalpincode.in/pincode/" + PinCode
+		type : GET
+	];
+ 
+	pindata = resp.get(0).get("PostOffice").get(0);
+	Street = ifnull(pindata.get("Name"), null);
+	info Street;
+	State = pindata.get("Circle");
+	info State;
+	city = pindata.get("District");
+	info city;
+	country = pindata.get("Country");
+	info country;
+ 
+	// Region logic
+	region = "";
+	if (State == "Gujarat")
+	{
+		region = "West";
+	}
+	else if (State == "Maharashtra" || State == "Rajasthan" || State == "Goa")
+	{
+		region = "West";
+	}
+	else if (State == "Delhi" || State == "Haryana" || State == "Uttar Pradesh" || State == "Punjab")
+	{
+		region = "North";
+	}
+	else if (State == "West Bengal" || State == "Odisha" || State == "Bihar" || State == "Jharkhand")
+	{
+		region = "East";
+	}
+	else if (State == "Tamil Nadu" || State == "Kerala" || State == "Karnataka" || State == "Andhra Pradesh" || State == "Telangana")
+	{
+		region = "South";
+	}
+	else
+	{
+		region = "Other";
+	}
+	info region;
+ 
+	// Combine into a multiline address
+	address = "";
+if (Street != null)
+{
+	address = address + Street + "\n";
+}
+if (city != null)
+{
+	address = address + "City: " + city + "\n";
+}
+if (State != null)
+{
+	address = address + State + "\n";
+}
+if (country != null)
+{
+	address = address + country + "\n";
+}
+if (PinCode != null)
+{
+	address = address + "PIN: " + PinCode;
+}
+	info address;
+ 
+ 
+	mp = map();
+	mp.put("Address", address); 
+	mp.put("Region", region);    
+ 
+	update = zoho.crm.updateRecord("Leads", leadid, mp);
+	info update;
+}
