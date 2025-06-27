@@ -1,0 +1,46 @@
+void schedule.High_Risk_Claim2(String claim_id)
+{
+one_year_ago = zoho.currentdate.subYear(1);
+// 	info "One year ago: " + one_year_ago;
+// Get single contact by ID
+deal_id = zoho.crm.getRecordById("Deals",claim_id);
+contact_name = deal_id.get("Contact_Name").get("id");
+info contact_name;
+amount = deal_id.get("Claim_Settlement_Amount");
+deal_id_email = deal_id.get("Email_Address");
+search_criteria = "Contact_Name:equals:" + contact_name;
+match_deals = zoho.crm.searchRecords("Deals",search_criteria);
+info match_deals;
+// Filter by date within the past year
+canceled_count = 0;
+for each  deal in match_deals
+{
+	closed_date = deal.get("Closing_Date");
+	info closed_date;
+	if(closed_date != null)
+	{
+		closed_date_parsed = closed_date.toDate();
+// 		info closed_date_parsed;
+		if(closed_date_parsed >= one_year_ago  && closed_date_parsed <= zoho.currentdate.toDate() && amount > 10000)
+		{
+			canceled_count = canceled_count + 1;
+		}
+	}
+}
+info canceled_count;
+// Update Risk Status
+update_map_high = Map();
+update_map_low = Map();
+if(canceled_count >= 3)
+{
+	update_map_high.put("Risk_Level","High");
+	updateResp = zoho.crm.updateRecord("Contacts",contact_name,update_map_high);
+	info updateResp;
+}
+else
+{
+	update_map_low.put("Risk_Level","Low");
+	updateResp = zoho.crm.updateRecord("Contacts",contact_name,update_map_low);
+	info updateResp;
+}
+}
