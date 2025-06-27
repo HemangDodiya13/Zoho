@@ -1,0 +1,143 @@
+<%{
+	%>
+<html>
+<head>
+<style>
+ 
+        body {
+ 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+ 
+            margin: 0;
+ 
+            padding: 20px;
+ 
+            background-color: #eef2f5;
+ 
+            color: #333;
+ 
+        }
+        h1 {
+ 
+            text-align: center;
+ 
+            margin-bottom: 30px;
+ 
+            color: #007BFF;
+ 
+        }
+        .table-container {
+ 
+            overflow-x: auto;
+ 
+            background-color: #fff;
+ 
+            padding: 20px;
+ 
+            border-radius: 8px;
+ 
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+ 
+        }
+        table {
+ 
+            width: 100%;
+ 
+            border-collapse: collapse;
+ 
+            min-width: 600px;
+ 
+        }
+        th, td {
+ 
+            padding: 14px 18px;
+ 
+            border-bottom: 1px solid #e0e0e0;
+ 
+            text-align: left;
+ 
+        }
+        th {
+ 
+            background-color: #007BFF;
+ 
+            color: #fff;
+ 
+            text-transform: uppercase;
+ 
+            font-size: 14px;
+ 
+            letter-spacing: 0.5px;
+ 
+        }
+        tr:nth-child(even) {
+ 
+            background-color: #f8f9fa;
+ 
+        }
+        tr:hover {
+ 
+            background-color: #e9f3ff;
+ 
+            transition: background-color 0.3s ease;
+ 
+        }
+        @media (max-width: 768px) {
+ 
+            body {
+ 
+                padding: 10px;
+ 
+            }
+            th, td {
+ 
+                padding: 10px;
+ 
+                font-size: 14px;
+ 
+            }
+ 
+        }
+</style>
+</head>
+<body>
+<h1>Customer Information</h1>
+<div class="table-container">
+<%
+	// Fetching all customer records where ID is not 0
+	agent_data = Student_Info[ID != 0];
+	// Start the HTML table structure
+	table_data = "<table><tr><th>Customer Name</th><th>Phone Number</th><th>Email</th><th>Image</th></tr>";
+	// Loop through each customer record
+	for each  res in agent_data
+	{
+		UserImg = "No Image";
+		// Check if image field is not empty
+		User_Image = Student_Info[ID = res.ID];
+		student_image = User_Image.Image;
+		if(student_image.contains("sharedBy"))
+		{
+			src = student_image.getsuffix("src");
+			src = src.getprefix("border").trim();
+			src = src.getSuffix("\"").trim();
+			src = src.getPrefix("\"").trim();
+			if(src.contains("sharedBy"))
+			{
+				image_name = src.getSuffix("image/").trim();
+				src = "https://creator.zoho.in" + zoho.appuri + "All_Student_Infos/" + User_Image.ID + "/Image/image-download/" + image_name;
+				user_img = "<img style='height:60px; width:60px;' src='" + src + "' />";
+			}
+		}
+		// Append a row to the table with customer data
+		table_data = table_data + "<tr><td>" + res.Student_Name + "</td><td>" + res.Phone_Number + "</td><td><a href='mailto:" + res.Email + "'>" + res.Email + "</a></td><td>" + user_img + "</td></tr>";
+	}
+	// Close the table tag
+	table_data = table_data + "</table>";
+	%>
+<%=table_data%>
+</div>
+</body>
+</html>
+<%
+ 
+}%>
