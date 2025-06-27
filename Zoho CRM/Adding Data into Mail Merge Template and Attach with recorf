@@ -1,0 +1,61 @@
+void automation.attach_file(String transactionId)
+{
+transaction = zoho.crm.getRecordById("Deals",transactionId);
+client = transaction.get("Contact_Name");
+tr_name = transaction.get("Deal_Name");
+info tr_name;
+id = transaction.get("id");
+info id;
+info client;
+closing_date = transaction.get("Closing_Date");
+info closing_date;
+address = transaction.get("Address");
+info address;
+buyer = transaction.get("Buyer_Name");
+info buyer;
+property = transaction.get("Property_Type_1");
+info property;
+price = transaction.get("Sale_Price");
+record_map = Map();
+record_map.put("Name",tr_name);
+record_map.put("Transaction_ID",id);
+legal_data = zoho.crm.createRecord("Legal_Documents",record_map);
+info legal_data;
+legal_id = legal_data.get("id");
+info legal_id;
+documentName = "Sale Agreement";
+mergeData = Map();
+mergeData.put("Buyer_Name",buyer);
+mergeData.put("Property_Type_1",property);
+mergeData.put("Sale_Price",price);
+mergeData.put("Address",address);
+mergeData.put("Contact_Name",client);
+mergeData.put("Closing_Date",closing_date);
+// info mergeData ;
+dataMap = Map();
+dataMap.put("data",mergeData);
+info dataMap;
+mergeValues = Map();
+mergeValues.put("merge_data",dataMap);
+// info mergeValues ;
+mergeDocumentId = "u89yj8462a26c12bc4186a1197dce36689867";
+mergedPDF = zoho.writer.mergeAndDownload(mergeDocumentId,"pdf",mergeValues,"pdf_generate");
+info mergeValues;
+info dataMap;
+info mergeData;
+mergedPDF.setFileName(documentName + ".pdf");
+saveAttachment = zoho.crm.attachFile("Legal_Documents",legal_id,mergedPDF);
+info saveAttachment;
+// related_dt = zoho.crm.getRelatedRecords("Attachments","Deals",transactionId);
+// info related_dt;
+// record_map.put("Uploaded_File", mergedPDF);
+// url = "https://writer.zoho.in/writer/open/u89yj8462a26c12bc4186a1197dce36689867";
+// file_object = invokeurl
+// [
+// 	url :url
+// 	type :GET
+// ];
+// // Attach it to a record (in this case, a Lead)
+// response = zoho.crm.attachFile("Legal_Documents",908459000000653579,file_object);
+// info response;
+}
