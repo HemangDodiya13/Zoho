@@ -655,3 +655,33 @@ else
 	info "Claim count less than 3 or No Claims Found.";
 }
 }
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//This code is for creating Meeting in Zoho Meeting from Zoho CRM 
+
+startDateTime = meeting_start_date_and_time.toString("MMM dd, yyyy hh:mm a");
+		// 		endDateTime = newCallDate.addMinutes(30).toString("MMM dd, yyyy hh:mm a");
+		session_details = Map();
+		session_details.put("topic","Follow Up Meeting");
+		session_details.put("agenda","New Meeting");
+		session_details.put("presenter","60040309730");
+		session_details.put("startTime",startDateTime);
+		session_details.put("duration",30);
+		session_details.put("timezone","Asia/Calcutta");
+		participantsList = List();
+		participantsList.add({"email":lead_email});
+		participantsList.add({"email":lead_owner_email});
+		session_details.put("participants",participantsList);
+		payload = Map();
+		payload.put("session",session_details);
+		info payload;
+		zsoid = "60040309730";
+		url = "https://meeting.zoho.in/api/v2/" + zsoid + "/sessions.json";
+		response = invokeurl
+		[
+			url :url
+			type :POST
+			body:payload.toString()
+			connection:"crmtomeetings"
+		];
+		info response;
