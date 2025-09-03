@@ -1,0 +1,342 @@
+//This code is for creating daily Repetitve task 
+//It will skip on 1st 3rd Saturday, Sunday and Holiday
+//It will also skip 1st 3rd Saturday, Sunday and Holiday if start or due date falls in that criteria
+
+org_id = 60044145235;
+r_task_data = invokeurl
+[
+	url :"https://desk.zoho.in/api/v1/cm_repetitive_tasks/search?field1=cf_status:In Progress&field2=cf_frequency:Daily"
+	type :GET
+	connection:"zohodeskconnections"
+];
+all_r_task = r_task_data.get("data");
+info all_r_task.size();
+// --- Holiday list
+holiday_list = invokeurl
+[
+	url :"https://desk.zoho.in/api/v1/holidayList/204470000000584119"
+	type :GET
+	headers:{"orgId":org_id}
+	connection:"zohodeskconnections"
+];
+all_holidays = holiday_list.get("holidays");
+// Store holiday ranges
+holidayRanges = List();
+for each  h in all_holidays
+{
+	from_date = h.get("from").concat("-2025").toDate();
+	// "2025-08-15"
+	to_date = h.get("to").concat("-2025").toDate();
+	if(from_date != null && to_date != null)
+	{
+		rangeMap = Map();
+		rangeMap.put("from",from_date);
+		rangeMap.put("to",to_date);
+		holidayRanges.add(rangeMap);
+	}
+}
+// --- Loop through repetitive tasks
+for each  each_task in all_r_task
+{
+	task_id = each_task.get("id");
+	name = each_task.get("name");
+	response = invokeurl
+	[
+		url :"https://desk.zoho.in/api/v1/cm_repetitive_tasks/" + task_id
+		type :GET
+		headers:{"orgId":org_id}
+		connection:"zohodeskconnections"
+	];
+	task_subject = response.get("name");
+	end_base = response.get("cf").get("cf_end_base");
+	owner_id = response.get("owner").getJSON("id");
+	today = zoho.currenttime;
+	todayKey = today.toDate();
+	info "Current Date: " + todayKey;
+	rep_task_map = Map();
+	search_rec = invokeurl
+	[
+		url :"https://desk.zoho.in/api/v1/cm_tasks_creation/search?field1=owner:" + owner_id + "&field2=cf_task_type:Weekly&field3=name:" + task_subject
+		type :GET
+		connection:"zohodeskconnections"
+	];
+	rec_size = search_rec.get("data").size();
+	// 	info "Record Size: " + rec_size;
+	if(rec_size > 0)
+	{
+		info "No of Task";
+		task_rec = search_rec.get("data").get(0);
+		task_name = task_rec.get("name");
+		day_count = 1;
+		// Start/Due Date as next day initially
+		task_start_date = task_rec.get("cf").get("cf_start_date").toDateTime("yyyy-MM-dd'T'HH:mm:ss").addDay(1);
+		task_due_date = task_rec.get("cf").get("cf_due_date").toDateTime("yyyy-MM-dd'T'HH:mm:ss").addDay(1);
+		start_date_dow = task_start_date.getDayOfWeek();
+		info task_name + "Start Date: " + task_start_date + " | Day of Week: " + start_date_dow;
+		// --- Check weekends & holidays ---
+		if(start_date_dow == 7)
+		{
+			// Saturday
+			dom = task_start_date.getDay();
+			// Day of month
+			if(dom <= 7 || dom >= 15 && dom <= 21)
+			{
+				day_count = 3;
+				// 1st or 3rd Saturday → skip Sat & Sun
+				info "Skipping 1st/3rd Saturday → day_count = 2";
+			}
+			else
+			{
+				day_count = 1;
+				info "Saturday Block Adding Day Count: " + day_count;
+			}
+		}
+		else if(start_date_dow == 1)
+		{
+			// Sunday
+			day_count = 2;
+			info "Skipping Sunday → day_count = 2";
+		}
+		else
+		{
+			// Check if start_date falls inside a holiday range
+			for each  hRange in holidayRanges
+			{
+				h_from = hRange.get("from").concat("-2025").toDate();
+				h_to = hRange.get("to").concat("-2025").toDate();
+				if(task_start_date.toDate() >= h_from && task_start_date.toDate() <= h_to)
+				{
+					// inclusive holiday duration
+					day_between = h_from.daysBetween(h_to);
+					if(day_between == 0)
+					{
+						day_count = 2;
+					}
+					else if(day_between > 0)
+					{
+						day_count = h_from.daysBetween(h_to) + 1;
+					}
+					else
+					{
+						day_count = 1;
+					}
+					// 				info "Days Between: "+day_between;
+					// 				info "Line 283: "+ day_count;
+					info "Skipping Holiday (" + h_from + " to " + h_to + ") → day_count = " + day_count;
+					break;
+				}
+			}
+		}
+		info "Count of Days to be Added:" + day_count;
+		proper_start_date = task_rec.get("cf").get("cf_start_date").toDateTime("yyyy-MM-dd'T'HH:mm:ss").addDay(day_count).toString("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
+		proper_due_date = task_rec.get("cf").get("cf_due_date").toDateTime("yyyy-MM-dd'T'HH:mm:ss").addDay(day_count).toString("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
+	}
+	if(end_base == "No of Task")
+	{
+		info "No of Task";
+		target_count = response.get("cf").get("cf_for_how_many_days");
+		info "target Count: " + target_count;
+		// --- Create only if we still have fewer than target_count
+		if(rec_size < target_count)
+		{
+			info "IF";
+			day_of_week = today.getDayOfWeek();
+			skip_task = false;
+			// --- Skip Sunday
+			if(day_of_week == 1)
+			{
+				skip_task = true;
+				info "Skipping: Sunday";
+			}
+			// --- Skip 1st & 3rd Saturday
+			if(skip_task == false && day_of_week == 7)
+			{
+				dom = today.getDay();
+				// Day of month
+				if(dom <= 7 || dom >= 15 && dom <= 21)
+				{
+					skip_task = true;
+					info "Skipping: 1st or 3rd Saturday";
+				}
+			}
+			// --- Skip Holiday (range check)
+			if(skip_task == false)
+			{
+				for each  hRange in holidayRanges
+				{
+					h_from = hRange.get("from");
+					h_to = hRange.get("to");
+					if(todayKey >= h_from && todayKey <= h_to)
+					{
+						skip_task = true;
+						info "Skipping: Holiday Range " + h_from + " to " + h_to;
+						break;
+					}
+				}
+			}
+			if(skip_task == false)
+			{
+				// owner/layout/department
+				owner_id = response.get("owner").get("id");
+				layout_id = 204470000000632654;
+				dept_id = 204470000000010772;
+				owner_data = zoho.desk.getRecordById(org_id,"agents",owner_id);
+				on_leave = owner_data.get("cf").get("cf_on_leave");
+				cf_map = Map();
+				cf_map.put("cf_start_date",proper_start_date);
+				cf_map.put("cf_due_date",proper_due_date);
+				cf_map.put("cf_score","0");
+				cf_map.put("cf_task_type","Daily");
+				if(on_leave == true || on_leave == "true")
+				{
+					cf_map.put("cf_status","On Leave");
+				}
+				else
+				{
+					cf_map.put("cf_status","Not Started");
+				}
+				create_map = Map();
+				create_map.put("cf",cf_map);
+				create_map.put("owner",{"id":owner_id});
+				create_map.put("layout",{"id":layout_id});
+				create_map.put("department",{"id":dept_id});
+				create_map.put("name",task_subject);
+				// Uncomment to create record
+				// 				create_rec = invokeurl
+				// 				[
+				// 					url :"https://desk.zoho.in/api/v1/cm_tasks_creation"
+				// 					type :POST
+				// 					parameters:create_map.toString()
+				// 					headers:{"orgId":org_id,"Content-Type":"application/json"}
+				// 					connection:"zohodeskconnections"
+				// 				];
+				// 			info "Task created for " + todayKey + ": " + create_rec;
+			}
+			else
+			{
+				info "Task not created for " + todayKey + " (weekend/holiday)";
+			}
+		}
+		else
+		{
+			info "ELSE Block";
+		}
+		if(rec_size == target_count)
+		{
+			rep_task_map.put({"cf":{"cf_status":"Completed"}});
+			update_rec = invokeurl
+			[
+				url :"https://desk.zoho.in/api/v1/cm_repetitive_tasks/" + task_id
+				type :PATCH
+				parameters:rep_task_map.toString()
+				headers:{"orgId":"60044145235"}
+				connection:"zohodeskconnections"
+			];
+		}
+	}
+	else if(end_base == "Date")
+	{
+		schedule_end_date = response.get("cf").get("cf_schedule_end_date").toDate();
+		info "Schedule End Date: " + schedule_end_date;
+		// 		if (  ) 
+		//         {
+		// 			info "End Type is Date Yes" ;
+		//         }
+		if(todayKey <= schedule_end_date)
+		{
+			info "IF";
+			day_of_week = today.getDayOfWeek();
+			skip_task = false;
+			// --- Skip Sunday
+			if(day_of_week == 1)
+			{
+				skip_task = true;
+				info "Skipping: Sunday";
+			}
+			// --- Skip 1st & 3rd Saturday
+			if(skip_task == false && day_of_week == 7)
+			{
+				dom = today.getDay();
+				// Day of month
+				if(dom <= 7 || dom >= 15 && dom <= 21)
+				{
+					skip_task = true;
+					info "Skipping: 1st or 3rd Saturday";
+				}
+			}
+			// --- Skip Holiday (range check)
+			if(skip_task == false)
+			{
+				for each  hRange in holidayRanges
+				{
+					h_from = hRange.get("from");
+					h_to = hRange.get("to");
+					if(todayKey >= h_from && todayKey <= h_to)
+					{
+						skip_task = true;
+						info "Skipping: Holiday Range " + h_from + " to " + h_to;
+						break;
+					}
+				}
+			}
+			if(skip_task == false)
+			{
+				// owner/layout/department
+				owner_id = response.get("owner").get("id");
+				layout_id = 204470000000632654;
+				dept_id = 204470000000010772;
+				owner_data = zoho.desk.getRecordById(org_id,"agents",owner_id);
+				on_leave = owner_data.get("cf").get("cf_on_leave");
+				cf_map = Map();
+				cf_map.put("cf_start_date",proper_start_date);
+				cf_map.put("cf_due_date",proper_due_date);
+				cf_map.put("cf_score","0");
+				cf_map.put("cf_task_type","Daily");
+				if(on_leave == true || on_leave == "true")
+				{
+					cf_map.put("cf_status","On Leave");
+				}
+				else
+				{
+					cf_map.put("cf_status","Not Started");
+				}
+				create_map = Map();
+				create_map.put("cf",cf_map);
+				create_map.put("owner",{"id":owner_id});
+				create_map.put("layout",{"id":layout_id});
+				create_map.put("department",{"id":dept_id});
+				create_map.put("name",task_subject);
+				// Uncomment to create record
+				create_rec = invokeurl
+				[
+					url :"https://desk.zoho.in/api/v1/cm_tasks_creation"
+					type :POST
+					parameters:create_map.toString()
+					headers:{"orgId":org_id,"Content-Type":"application/json"}
+					connection:"zohodeskconnections"
+				];
+				// 			info "Task created for " + todayKey + ": " + create_rec;
+			}
+			else
+			{
+				info "Task not created for " + todayKey + " (weekend/holiday)";
+			}
+		}
+		else
+		{
+			info "Schedule End Date Crossed";
+		}
+		if(todayKey == schedule_end_date)
+		{
+			rep_task_map.put({"cf":{"cf_status":"Completed"}});
+			update_rec = invokeurl
+			[
+				url :"https://desk.zoho.in/api/v1/cm_repetitive_tasks/" + task_id
+				type :PATCH
+				parameters:rep_task_map.toString()
+				headers:{"orgId":"60044145235"}
+				connection:"zohodeskconnections"
+			];
+		}
+	}
+}
