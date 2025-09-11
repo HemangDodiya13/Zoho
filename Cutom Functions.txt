@@ -685,3 +685,51 @@ startDateTime = meeting_start_date_and_time.toString("MMM dd, yyyy hh:mm a");
 			connection:"crmtomeetings"
 		];
 		info response;
+
+
+
+//------------------------------------------
+
+//This code is for Fetching fiel from Upload field of one module and to put in Upload Field of another Module
+void automation.File_Transfer()
+{
+//Get the Record
+recordMap = zoho.crm.getRecordById("Deals",982695000000562249);
+//Get the Attachement Field
+recordAttachment = recordMap.get("Upload_Document");
+name = recordMap.get("Deal_Name");
+info recordAttachment;
+//Get the File Id
+fileId = recordAttachment.getJSON("file_Id");
+//Get Attachment ID
+attachmentId = recordAttachment.getJSON("attachment_Id");
+//Download File
+getFile = invokeurl
+[
+	url :"https://www.zohoapis.in/crm/v5/files?id=" + fileId
+	type :GET
+	connection:"zohocrmconnection"
+];
+getFile.setParamName("file");
+//Upload File to ZFS
+uploadFile = invokeurl
+[
+	url :"https://www.zohoapis.in/crm/v5/files"
+	type :POST
+	files:getFile
+	connection:"zohocrmconnection"
+];
+info uploadFile;
+//Get uploaded file Id
+uploadFileId = uploadFile.get("data").get(0).get("details").get("id");
+//info uploadFileId;
+//Add file into list/array
+fileList = List();
+fileList.add(uploadFileId);
+//Attach file to File Upload Field on Accounts Module.
+updateMap = Map();
+updateMap.put("Upload_Document",fileList);
+updateMap.put("Name", name);
+updateResponse = zoho.crm.createRecord("Transaction", updateMap);
+info updateResponse;
+}
