@@ -733,3 +733,29 @@ updateMap.put("Name", name);
 updateResponse = zoho.crm.createRecord("Transaction", updateMap);
 info updateResponse;
 }
+------------------------------------------------------------------------------------------
+
+This function is to get Longitude and Latitude 
+
+void automation.Push_Longitutde_Latitude(Int account_id,String city,String town,Int pincode,String country,String street,String state)
+{
+formatAddress = street + "," + town + "," + city + "," + state + "," + country + "," + pincode;
+// formatAddress = street + "," + town + "," + state + "," + country + "," + pincode;
+apiKey = "AIzaSyCR95nsbu_fljMmC_z8H0Xf6Jrth0Vokms";
+getResponse = invokeurl
+[
+	url :"https://maps.googleapis.com/maps/api/geocode/json?address=" + formatAddress + "&key=" + apiKey
+	type :GET
+];
+info getResponse;
+if(getResponse.get("results") != null)
+{
+	getGeoLocation = getResponse.get("results").get(0).get("geometry").get("location");
+	info getGeoLocation;
+	lati = getGeoLocation.get("lat");
+	long = getGeoLocation.get("lng");
+	updateMap = {"Latitude":lati.toString(),"Longitude":long.toString()};
+	updateAccount = zoho.crm.updateRecord("Accounts",account_id,updateMap);
+	info updateAccount;
+}
+}
